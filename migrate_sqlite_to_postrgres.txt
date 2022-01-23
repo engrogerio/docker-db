@@ -1,0 +1,73 @@
+
+https://www.eiximenis.dev/posts/2020-06-26-sql-server-docker-no-se-ejecuta-en-root/
+
+chown 10001 ~/sql/
+
+
+docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=passwd' -p 1433:1433 -v /home/rogerio/sql/data:/var/opt/mssql/data -v /home/rogerio/sql/log:/var/opt/mssql/log -v /home/rogerio/sql/secrets:/var/opt/mssql/secrets -d mcr.microsoft.com/mssql/server:2019-latest
+
+mssql-cli -S localhost -U sa
+
+
+
+docker Compose file:
+
+version: "3.7"
+services:
+  sqlserver_2019:
+    image: mcr.microsoft.com/mssql/server:2019-GA-ubuntu-16.04
+    hostname: sqlserver_2019
+    ports:
+      - 1433:1433
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong!Passw0rd
+    volumes:
+      - type: volume
+        source: data
+        target: /var/opt/mssql/data
+volumes:
+  data:
+    external:
+      name: sqlserver_2019
+
+# install sqlcmd
+
+https://database.guide/how-to-install-sqlcmd-bcp-on-ubuntu/
+
+# restore backup
+restore database Sanitizacao from disk = N'/home/rogerio/mssql-docker/Sanitizacao.bak' with file = 1, set nocount on ,nounload, replace, norecovery, stats=5
+
+# sqlcmd cli
+sqlcmd -S localhost -U sa -P 'password' 
+
+# this worked
+sqlcmd -S localhost -U SA -P 'password' -Q "RESTORE DATABASE [Sanitizacao] FROM DISK = N'/var/opt/mssql/bkp/Sanitizacao.bak' WITH MOVE 'Sanitizacao' TO '/var/opt/mssql/data/sanitizacao.mdf', MOVE 'Sanitizacao_log' TO '/var/opt/mssql/data/sanitizacao_log.ldf', FILE = 1, NOUNLOAD, REPLACE, WITH RECOVERY, STATS = 5"
+
+
+
+sqlcmd -S localhost -U SA -Q "BACKUP DATABASE [demodb] TO DISK = N'/var/opt/mssql/data/demodb.bak' WITH NOFORMAT, NOINIT, NAME = 'demodb-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+
+sqlcmd -S localhost -U SA -Q "BACKUP LOG [demodb] TO DISK = N'/var/opt/mssql/data/demodb_LogBackup.bak' WITH NOFORMAT, NOINIT, NAME = N'demodb_LogBackup', NOSKIP, NOREWIND, NOUNLOAD, STATS = 5"
+
+sqlcmd -S localhost -U SA -Q "RESTORE DATABASE [Sanitizacao] FROM DISK = N'Sanitizacao.bak' WITH FILE = 1, NOUNLOAD, REPLACE, NORECOVERY, STATS = 5"
+
+RESTORE DATABASE Sanitizacao
+FROM DISK = '/var/opt/mssql/backup/YourDB.bak'
+WITH MOVE 'YourDB' TO '/var/opt/mssql/data/YourDB.mdf',
+MOVE 'YourDB_Log' TO '/var/opt/mssql/data/YourDB_Log.ldf'
+GO
+
+
+# Show all databases
+select * from sysobjects where xtype='U'
+# Show all tables
+
+
+# Migrate from SQLITE to Postgres
+# Install pgloader:
+https://github.com/dimitri/pgloader
+
+pgloader db.sqlite3 postgresql://postgres:micromint@localhost:15432/sgp
+
+# Migrate from mssql to Postgres

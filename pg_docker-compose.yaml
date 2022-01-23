@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+   db:
+    container_name: postgres
+    image: postgres:latest
+    restart: always
+    tty: true
+    volumes:
+      - ./pgrdata/:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=passwd
+      - POSTGRES_DB=codebank
+    ports:
+      - "15432:5432"
+    networks:
+      - network-default
+   pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    tty: true
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=rogerio@inventsis.com.br
+      - PGADMIN_DEFAULT_PASSWORD=passwd
+    ports:
+      - "9000:80"
+    networks:
+      - network-default
+networks:
+   network-default:
+     driver: bridge
